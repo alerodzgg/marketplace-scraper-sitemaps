@@ -1,102 +1,145 @@
-# scraper
+# marketplace-scraper-sitemaps
 
-Colección de **sitemaps para [Web Scraper.io](https://webscraper.io/) / [Cloud Web Scraper](https://cloud.webscraper.io/)** usados para extraer publicaciones de autopartes, motopartes y tractopartes desde **eBay** y **Amazon**, como parte del pipeline de publicación masiva en Mercado Libre.
+🇪🇸 [Español](#español) | 🇬🇧 [English](#english)
+
+---
+
+## Español
+
+Colección de **sitemaps para [Web Scraper.io](https://webscraper.io/) / [Cloud Web Scraper](https://cloud.webscraper.io/)** para extraer publicaciones de productos desde **eBay** y **Amazon**. No está atado a una categoría específica — sirve para sourcing masivo de cualquier tipo de producto (autopartes, electrónica, ropa, hogar, etc.), reemplazando solo la URL de entrada según lo que se quiera extraer.
 
 Cada archivo `.js` de este repo **no es código ejecutable**: es un archivo de configuración JSON (sitemap) que se importa directamente en Web Scraper.io mediante *Sitemaps → Import sitemap*.
 
-## 📦 Flujo general
+### 📦 Flujo general
 
 ```
-Hoja "tiendas eBay" (Google Sheets)
-        │  columna "resultado link"
+Lista de tiendas / búsquedas (Google Sheets u otra fuente)
+        │  URL de tienda o de búsqueda
         ▼
- sitemap de LISTADO (paginación por tienda)
-        │  extrae: título, precio, vendedor, imágenes, compatibilidad, OEM
+ sitemap de LISTADO (paginación)
+        │  extrae: título, precio, vendedor, imágenes, compatibilidad, specs
         ▼
    Dataset crudo (CSV/JSON exportado de Web Scraper.io)
         │
         ▼
- Prompts de IA (identificación de pieza, título ML, compatibilidad)
+   Procesamiento (prompts de IA, normalización, validación)
         │
         ▼
-   Publicación en Mercado Libre (vía Integraly)
+   Publicación en el marketplace destino
 ```
 
-Existen dos variantes por marketplace: sitemaps de **listado por tienda** (recorren todas las publicaciones de una tienda con paginación) y sitemaps de **producto individual** (extraen un solo ítem a partir de una URL directa).
+Existen dos variantes por origen: sitemaps de **listado por tienda/búsqueda** (recorren todas las publicaciones con paginación) y sitemaps de **producto individual** (extraen un solo ítem a partir de una URL directa).
 
-## 🗂️ Sitemaps incluidos
+### 🗂️ Sitemaps incluidos
 
-| Archivo | Marketplace | Modo | Qué extrae | Punto de entrada típico |
+| Archivo | Origen | Modo | Qué extrae | Punto de entrada típico |
 |---|---|---|---|---|
-| `publicaciones+en+paginacion+ebay.js` | eBay | Listado de tienda + paginación | Título, tienda, precio, hasta 4 imágenes, compatibilidad, OEM | `resultado link` (Hoja "tiendas eBay") |
-| `publicaciones+en+paginacion+links+ebay.js` | eBay | Solo recolección de links + paginación | Únicamente los links de cada publicación (sin abrir el detalle) | `resultado link` de varias tiendas a la vez |
-| `publicaciones+en+lista+ebay.js` | eBay | Producto individual | Título, tienda, precio, imágenes, compatibilidad, OEM | URL directa de un ítem (`ebay.com/itm/...`) |
-| `compatiblidades+en+paginacion+ebay.js` | eBay | Listado de tienda + tabla de compatibilidad | Marca, Chasis, Línea, Modelo, Litros (tabla "Notes" de compatibilidad de vehículos) | `resultado link` de la tienda |
-| `compatibilidades+en+lista.js` | eBay | Producto individual | Misma tabla de compatibilidad (Marca, Chasis, Línea, Modelo, Litros) | URL directa de un ítem |
-| `publicaciones+en+paginacion+amazon.js` | Amazon | Búsqueda + paginación automática | Opción, tienda, título, precio, hasta 4 imágenes, compatibilidad, OEM | URL de búsqueda de Amazon (`amazon.com/s?k=...`) |
-| `publicaciones+en+lista+amazon.js` | Amazon | Producto individual | Igual que el anterior, pero por lista de URLs de producto directas | URL directa de producto (`amazon.com/dp/...`) |
+| `publicaciones+en+paginacion+ebay.js` | eBay | Listado de tienda + paginación | Título, tienda, precio, hasta 4 imágenes, compatibilidad, specs | URL de búsqueda de tienda |
+| `publicaciones+en+paginacion+links+ebay.js` | eBay | Solo recolección de links + paginación | Únicamente los links de cada publicación | URL de búsqueda (múltiples tiendas) |
+| `publicaciones+en+lista+ebay.js` | eBay | Producto individual | Título, tienda, precio, imágenes, compatibilidad, specs | URL directa de un ítem |
+| `compatiblidades+en+paginacion+ebay.js` | eBay | Listado + tabla de compatibilidad | Marca, Chasis, Línea, Modelo, Litros (tabla de compatibilidad de vehículos) | URL de búsqueda de tienda |
+| `compatibilidades+en+lista.js` | eBay | Producto individual | Misma tabla de compatibilidad | URL directa de un ítem |
+| `publicaciones+en+paginacion+amazon.js` | Amazon | Búsqueda + paginación automática | Opción, tienda, título, precio, hasta 4 imágenes, compatibilidad, specs | URL de búsqueda |
+| `publicaciones+en+lista+amazon.js` | Amazon | Producto individual | Igual al anterior, pero por lista de URLs directas | URL directa de producto |
 
-## 🔍 Detalle por sitemap
+### 🔍 Detalle por sitemap
 
-### eBay — Publicaciones (paginación por tienda)
-`publicaciones+en+paginacion+ebay.js`
+**eBay — Publicaciones (paginación por tienda)** — `publicaciones+en+paginacion+ebay.js`
+Paginación automática vía el botón "Go to next search page". Campos: Opcion, Tienda, Titulo, Precio, Imagen 1-4, Compatiblidad, OEM.
 
-- **Entrada:** URL de búsqueda de una tienda (`_ssn=` / `store_name=` / `sid=`), con `_pgn=` para páginas adicionales.
-- **Paginación:** automática vía `next_page`, sigue el botón *"Go to next search page"* mientras no esté deshabilitado.
-- **Campos:** `Opcion`, `Tienda`, `Titulo`, `Precio`, `Imagen 1-4`, `Compatiblidad`, `OEM`.
-- **Uso:** este es el sitemap principal para volcar el catálogo completo de cada tienda listada en la hoja de tiendas eBay.
+**eBay — Solo links (multi-tienda)** — `publicaciones+en+paginacion+links+ebay.js`
+Recolecta únicamente URLs de publicaciones (sin abrir el detalle) — paso previo rápido antes de scrapear el detalle.
 
-### eBay — Solo links (paginación, multi-tienda)
-`publicaciones+en+paginacion+links+ebay.js`
+**eBay — Producto individual** — `publicaciones+en+lista+ebay.js`
+Mismos campos que el de paginación, pero para una lista fija de URLs puntuales.
 
-- **Entrada:** lista de URLs `sid=` de **22 tiendas** precargadas (ej. `elite-suspension`, `hookedonsprocketsstore`, `maxpeedingrods-ca`, `turboengineparts-us`, `arkotractorparts`, etc.), cada una con el patrón `isRefine=true&_sop=15&_udlo=10&_udhi=500&_ipg=240`.
-- **Salida:** únicamente los **links** de cada publicación (no abre el detalle del ítem) — pensado como paso previo rápido de recolección masiva de URLs antes de scrapear el detalle.
+**eBay — Compatibilidad (paginación)** — `compatiblidades+en+paginacion+ebay.js`
+Hace clic para expandir la tabla de compatibilidad ("Notes") y extrae Modelo, Marca, Chasis, Línea, Litros por fila.
 
-### eBay — Producto individual
-`publicaciones+en+lista+ebay.js`
+**eBay — Compatibilidad (producto individual)** — `compatibilidades+en+lista.js`
+Misma lógica, para una lista fija de URLs de producto.
 
-- **Entrada:** lista de URLs `ebay.com/itm/<id>` (ítems puntuales).
-- **Campos:** los mismos que la versión con paginación, pero sin recorrer un listado — útil para reprocesar o verificar publicaciones específicas.
+**Amazon — Publicaciones (búsqueda + paginación)** — `publicaciones+en+paginacion+amazon.js`
+Navegación en 2 niveles: recolecta links de resultados y luego entra a cada página de producto. Incluye selectores de respaldo para precio.
 
-### eBay — Compatibilidad (paginación por tienda)
-`compatiblidades+en+paginacion+ebay.js`
+**Amazon — Producto individual** — `publicaciones+en+lista+amazon.js`
+Mismos campos, para una lista de URLs de producto directas.
 
-- **Entrada:** igual que el sitemap de publicaciones (URL de tienda).
-- **Mecánica:** dentro de cada `link` de producto, hace clic en `button.pagination__next` (tipo `clickMore`) para expandir la tabla de compatibilidad de vehículos (identificada por contener la palabra `"Notes"`).
-- **Campos extraídos por fila de la tabla:** `Modelo` (col. 1), `Marca` (col. 2), `Chasis` (col. 3), `Linea` (col. 4), `Litros` (col. 5).
-- **Uso:** alimenta directamente el prompt de "Extracción de datos de eBay" (compatibilidad de vehículos e inferencia de litros).
+### ⚙️ Notas técnicas
 
-### eBay — Compatibilidad (producto individual)
-`compatibilidades+en+lista.js`
+- Formato **Web Scraper.io Sitemap JSON** (`_id`, `startUrl`, `selectors`), compatible con importación directa en cloud.webscraper.io.
+- Los campos de compatibilidad/specs solo devuelven datos si la publicación individual los expone.
+- El sitemap de compatibilidad usa `clickType: clickMore` con `delay: 2000` para expandir tablas dinámicas — si el marketplace cambia el markup, el selector deberá actualizarse.
+- Los sitemaps de Amazon incluyen selectores de respaldo para tolerar variaciones de layout entre productos.
+- Para usar en una categoría distinta a la original, solo se necesita cambiar la `startUrl` por la tienda o búsqueda deseada; los selectores son agnósticos a la categoría del producto.
 
-- Misma lógica que el anterior, pero a partir de una lista fija de URLs de producto (`ebay.com/itm/...`) en lugar de una tienda completa.
+---
 
-### Amazon — Publicaciones (búsqueda + paginación)
-`publicaciones+en+paginacion+amazon.js`
+## English
 
-- **Entrada:** URL de búsqueda de Amazon (ej. `amazon.com/s?k=scitoo&i=automotive...`).
-- **Paginación:** automática vía `a.s-pagination-next`.
-- **Navegación en 2 niveles:** primero recolecta `product-link` desde los resultados de búsqueda, luego entra a cada `product-page` (`body:has(div#ppd)`) para extraer el detalle.
-- **Campos:** `Opcion`, `Tienda`, `Titulo`, `Precio` (con selector de respaldo `SelectorImage`/`a-offscreen`), `Imagen 1-4`, `Compatiblidad`, `OEM`.
-- **Uso:** corresponde a las búsquedas por palabra clave de la hoja "Búsquedas de Amazon" (a-premium, air+suspension, axle, bearing, etc.).
+A collection of **sitemaps for [Web Scraper.io](https://webscraper.io/) / [Cloud Web Scraper](https://cloud.webscraper.io/)** to extract product listings from **eBay** and **Amazon**. Not tied to a specific product category — it works for bulk sourcing of any product type (auto parts, electronics, apparel, home goods, etc.); just swap the input URL for whatever you want to scrape.
 
-### Amazon — Producto individual
-`publicaciones+en+lista+amazon.js`
+Each `.js` file in this repo is **not executable code**: it's a JSON configuration file (sitemap) that gets imported directly into Web Scraper.io via *Sitemaps → Import sitemap*.
 
-- **Entrada:** lista de URLs de producto de Amazon (`amazon.com/dp/<ASIN>` o con parámetros de búsqueda/sponsor incluidos).
-- **Campos:** los mismos que el sitemap de búsqueda paginada, pero sin recorrer resultados — para productos puntuales.
+### 📦 General flow
 
-## ⚙️ Notas técnicas
+```
+Store/search list (Google Sheets or another source)
+        │  store or search URL
+        ▼
+ LISTING sitemap (pagination)
+        │  extracts: title, price, seller, images, compatibility, specs
+        ▼
+   Raw dataset (CSV/JSON exported from Web Scraper.io)
+        │
+        ▼
+   Processing (AI prompts, normalization, validation)
+        │
+        ▼
+   Publishing to the target marketplace
+```
 
-- Todos los sitemaps son formato **Web Scraper.io Sitemap JSON** (`_id`, `startUrl`, `selectors`), compatibles con importación directa en [cloud.webscraper.io](https://cloud.webscraper.io/).
-- Los selectores de compatibilidad (`Compatiblidad`, `OEM`) solo devuelven datos si la publicación individual los expone en su página — por eso en la hoja de tiendas eBay se marca por tienda si tiene o no el filtro/dato de "compabilidad".
-- El sitemap de compatibilidad usa `clickType: clickMore` con `delay: 2000` para expandir tablas dinámicas antes de leerlas — si eBay cambia el markup de la sección "Notes", este selector deberá actualizarse.
-- Los sitemaps de Amazon incluyen selectores de respaldo (`Precio respaldo`, selector alterno con `:visible`) para tolerar variaciones del layout de precio entre productos.
+There are two variants per source: **store/search listing** sitemaps (crawl every listing with pagination) and **single product** sitemaps (extract one item from a direct URL).
 
-## 🔗 Relación con el resto del proyecto
+### 🗂️ Included sitemaps
 
-| Sitemap | Alimenta |
-|---|---|
-| `publicaciones+en+paginacion+ebay.js` / `+amazon.js` | Prompt 1.0-1.1 (Identificación de autoparte) y 2.0-2.5 (Título ML) |
-| `compatiblidades+en+paginacion+ebay.js` / `compatibilidades+en+lista.js` | Prompt 3.0-3.2 (Extracción de compatibilidad de vehículos e inferencia de litros) |
-| `publicaciones+en+paginacion+links+ebay.js` | Paso previo de recolección masiva de URLs, antes de correr los sitemaps de detalle |
+| File | Source | Mode | What it extracts | Typical entry point |
+|---|---|---|---|---|
+| `publicaciones+en+paginacion+ebay.js` | eBay | Store listing + pagination | Title, seller, price, up to 4 images, compatibility, specs | Store search URL |
+| `publicaciones+en+paginacion+links+ebay.js` | eBay | Link collection only + pagination | Just the listing links | Search URL (multiple stores) |
+| `publicaciones+en+lista+ebay.js` | eBay | Single product | Title, seller, price, images, compatibility, specs | Direct item URL |
+| `compatiblidades+en+paginacion+ebay.js` | eBay | Listing + compatibility table | Make, Chassis, Line, Model, Liters (vehicle compatibility table) | Store search URL |
+| `compatibilidades+en+lista.js` | eBay | Single product | Same compatibility table | Direct item URL |
+| `publicaciones+en+paginacion+amazon.js` | Amazon | Search + auto pagination | Option, seller, title, price, up to 4 images, compatibility, specs | Search URL |
+| `publicaciones+en+lista+amazon.js` | Amazon | Single product | Same as above, for a list of direct URLs | Direct product URL |
+
+### 🔍 Sitemap details
+
+**eBay — Listings (store pagination)** — `publicaciones+en+paginacion+ebay.js`
+Auto-pagination via the "Go to next search page" button. Fields: Opcion, Tienda, Titulo, Precio, Imagen 1-4, Compatiblidad, OEM.
+
+**eBay — Links only (multi-store)** — `publicaciones+en+paginacion+links+ebay.js`
+Collects only listing URLs (doesn't open item detail) — a fast pre-step before scraping details.
+
+**eBay — Single product** — `publicaciones+en+lista+ebay.js`
+Same fields as the pagination version, for a fixed list of specific URLs.
+
+**eBay — Compatibility (pagination)** — `compatiblidades+en+paginacion+ebay.js`
+Clicks to expand the compatibility ("Notes") table and extracts Model, Make, Chassis, Line, Liters per row.
+
+**eBay — Compatibility (single product)** — `compatibilidades+en+lista.js`
+Same logic, for a fixed list of product URLs.
+
+**Amazon — Listings (search + pagination)** — `publicaciones+en+paginacion+amazon.js`
+Two-level navigation: collects result links, then visits each product page. Includes fallback selectors for price.
+
+**Amazon — Single product** — `publicaciones+en+lista+amazon.js`
+Same fields, for a list of direct product URLs.
+
+### ⚙️ Technical notes
+
+- **Web Scraper.io Sitemap JSON** format (`_id`, `startUrl`, `selectors`), ready for direct import into cloud.webscraper.io.
+- Compatibility/specs fields only return data if the individual listing exposes them.
+- The compatibility sitemap uses `clickType: clickMore` with a `2000ms` delay to expand dynamic tables — if the marketplace changes its markup, the selector will need updating.
+- The Amazon sitemaps include fallback selectors to tolerate layout variations between products.
+- To use this for a different category than the original one, just swap `startUrl` for the desired store or search; the selectors are category-agnostic.
